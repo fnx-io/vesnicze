@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:flutter/material.dart' show Colors;
 import 'package:flutter/painting.dart';
@@ -88,10 +89,14 @@ class VesniczeView extends StatelessWidget {
 class PanaCzechPaint extends CustomPainter {
   final Color color;
 
-  const PanaCzechPaint(this.color);
+  Path _pathCache;
+  Size _lastSize;
+
+  PanaCzechPaint(this.color);
 
   @override
   void paint(Canvas canvas, Size size) {
+    _lastSize = size;
     Paint paint = new Paint()
       ..isAntiAlias = false
       ..color = color
@@ -101,20 +106,21 @@ class PanaCzechPaint extends CustomPainter {
     if (size.width < 8) {
       paint.style = PaintingStyle.fill;
       canvas.drawCircle(Offset(size.width * 0.50, size.height * 0.5), size.width * 0.4, paint);
-      return;
+    } else {
+      if (_pathCache == null) {
+        _pathCache = Path();
+        _pathCache.moveTo(size.width * 0.20, size.height * 0.40);
+        _pathCache.lineTo(size.width * 0.80, size.height * 0.40);
+        _pathCache.moveTo(size.width * 0.50, size.height * 0.30);
+        _pathCache.lineTo(size.width * 0.50, size.height * 0.60);
+        _pathCache.lineTo(size.width * 0.30, size.height * 0.90);
+        _pathCache.moveTo(size.width * 0.50, size.height * 0.60);
+        _pathCache.lineTo(size.width * 0.70, size.height * 0.90);
+      }
+      canvas.drawPath(_pathCache, paint);
+      paint.style = PaintingStyle.fill;
+      canvas.drawCircle(Offset(size.width * 0.50, size.height * 0.15), size.width / 7, paint);
     }
-
-    Path path = Path();
-    path.moveTo(size.width * 0.20, size.height * 0.40);
-    path.lineTo(size.width * 0.80, size.height * 0.40);
-    path.moveTo(size.width * 0.50, size.height * 0.30);
-    path.lineTo(size.width * 0.50, size.height * 0.60);
-    path.lineTo(size.width * 0.30, size.height * 0.90);
-    path.moveTo(size.width * 0.50, size.height * 0.60);
-    path.lineTo(size.width * 0.70, size.height * 0.90);
-    canvas.drawPath(path, paint);
-    paint.style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(size.width * 0.50, size.height * 0.15), size.width / 7, paint);
   }
 
   @override
@@ -124,8 +130,9 @@ class PanaCzechPaint extends CustomPainter {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is PanaCzechPaint && runtimeType == other.runtimeType && color == other.color;
+      identical(this, other) ||
+      other is PanaCzechPaint && runtimeType == other.runtimeType && color == other.color && _lastSize == other._lastSize;
 
   @override
-  int get hashCode => color.hashCode;
+  int get hashCode => color.hashCode ^ _lastSize.hashCode;
 }
