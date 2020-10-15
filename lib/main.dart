@@ -1,9 +1,10 @@
 import 'dart:math';
 
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Colors;
 import 'package:flutter/painting.dart';
+import 'package:flutter/widgets.dart';
 import 'package:vesnicze/data.dart';
+import 'package:vesnicze/model.dart';
 
 void main() {
   runApp(MyApp());
@@ -13,12 +14,7 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-        ),
-        home: VesniczeScreen());
+    return Directionality(textDirection: TextDirection.ltr, child: VesniczeScreen());
   }
 }
 
@@ -54,47 +50,25 @@ class VesniczeView extends StatelessWidget {
 
     int screenPeople = columns * rows;
 
+    var commonWidget = CustomPaint(size: Size(cellWidth, cellHeight), painter: PanaCzechPaint(Colors.grey.shade200));
+    var deadWidget = CustomPaint(size: Size(cellWidth, cellHeight), painter: PanaCzechPaint(Colors.black));
+    var infectedWidget = CustomPaint(size: Size(cellWidth, cellHeight), painter: PanaCzechPaint(Colors.yellow.shade600));
+    var hospitalWidget = CustomPaint(size: Size(cellWidth, cellHeight), painter: PanaCzechPaint(Colors.red));
+    var fineWidget = CustomPaint(size: Size(cellWidth, cellHeight), painter: PanaCzechPaint(Colors.green.shade600));
+
     var nums = (data['data'] as List).first.cast<String, num>();
-    int deadCount = max((nums['umrti'] * screenPeople / allPeople).round(), 1);
-    int hospitalCount = (nums['aktualne_hospitalizovani'] * screenPeople / allPeople).round() + deadCount;
-    int infectedCount = (nums['aktivni_pripady'] * screenPeople / allPeople).round() + hospitalCount;
-    int fineCount = (nums['vyleceni'] * screenPeople / allPeople).round() + infectedCount;
+    VesniczeModel model = VesniczeModel(commonWidget);
 
-    var commonWidget = CustomPaint(
-        size: Size(cellWidth, cellHeight), //You can Replace this with your desired WIDTH and HEIGHT
-        painter: PanaCzechPaint(Colors.grey.shade200));
-
-    var deadWidget = CustomPaint(
-        size: Size(cellWidth, cellHeight), //You can Replace this with your desired WIDTH and HEIGHT
-        painter: PanaCzechPaint(Colors.black));
-
-    var infectedWidget = CustomPaint(
-        size: Size(cellWidth, cellHeight), //You can Replace this with your desired WIDTH and HEIGHT
-        painter: PanaCzechPaint(Colors.yellow.shade600));
-
-    var hospitalWidget = CustomPaint(
-        size: Size(cellWidth, cellHeight), //You can Replace this with your desired WIDTH and HEIGHT
-        painter: PanaCzechPaint(Colors.red));
-
-    var fineWidget = CustomPaint(
-        size: Size(cellWidth, cellHeight), //You can Replace this with your desired WIDTH and HEIGHT
-        painter: PanaCzechPaint(Colors.green.shade600));
+    model.addPopulation(fineWidget, (nums['vyleceni'] * screenPeople / allPeople).round());
+    model.addPopulation(deadWidget, max((nums['umrti'] * screenPeople / allPeople).round(), 1));
+    model.addPopulation(hospitalWidget, (nums['aktualne_hospitalizovani'] * screenPeople / allPeople).round());
+    model.addPopulation(infectedWidget, (nums['aktivni_pripady'] * screenPeople / allPeople).round());
 
     List<Widget> panaczkys = List.generate(screenPeople, (index) {
       int ry = index ~/ columns;
       int rx = index % columns;
-
-      Widget p = commonWidget;
-      if (index < deadCount) {
-        p = deadWidget;
-      } else if (index < hospitalCount) {
-        p = hospitalWidget;
-      } else if (index < infectedCount) {
-        p = infectedWidget;
-      } else if (index < fineCount) {
-        p = fineWidget;
-      }
-      return Positioned(top: ry * cellHeight, left: rx * cellWidth, height: cellHeight, width: cellWidth, child: p);
+      if (rx == 0) model.next();
+      return Positioned(top: ry * cellHeight, left: rx * cellWidth, height: cellHeight, width: cellWidth, child: model.take());
     }).toList();
 
     print("Celkem panacku: $screenPeople");
@@ -121,12 +95,12 @@ class PanaCzechPaint extends CustomPainter {
     Paint paint = new Paint()
       ..isAntiAlias = false
       ..color = color
-      ..strokeWidth = (size.width / 10).ceilToDouble()
+      ..strokeWidth = (size.width / 8).ceilToDouble()
       ..style = PaintingStyle.stroke;
 
     if (size.width < 8) {
       paint.style = PaintingStyle.fill;
-      canvas.drawCircle(Offset(size.width * 0.50, size.height * 0.5), size.width / 3, paint);
+      canvas.drawCircle(Offset(size.width * 0.50, size.height * 0.5), size.width * 0.4, paint);
       return;
     }
 
@@ -140,7 +114,7 @@ class PanaCzechPaint extends CustomPainter {
     path.lineTo(size.width * 0.70, size.height * 0.90);
     canvas.drawPath(path, paint);
     paint.style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(size.width * 0.50, size.height * 0.2), size.width / 8, paint);
+    canvas.drawCircle(Offset(size.width * 0.50, size.height * 0.15), size.width / 7, paint);
   }
 
   @override
